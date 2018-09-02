@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>reveal.js – The HTML Presentation Framework</title>
+
+		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+		<meta name="author" content="Hakim El Hattab">
+
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/black.css" id="theme">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<p style="font-size:60px;">rustでllvm-irを出力する</p>
+					<p><a href="https://twitter.com/rChaser53">@rchaser53</a></p>
+					<img alt="" src="./img/neko.jpg" />
+				</section>
+
+				<section style="text-align:left;">
+          <p>rust-sysを用いてllvm-irを吐く話です</p>
+          <p><a href="https://github.com/rchaser53/rust-monkey-ir">自作の言語</a>の最終出力物をllvm-irにしました</p>
+					<p>llvm-irをこれから触る方の足しになれば幸いです</p>
+				</section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+          <p style="font-size: 50px; font-weight:bold;">llvm-irとは?</p>
+            - コンパイラのフロントエンドの部分で出力するもの
+            - Rustもllvm-irは出力している
+          </script>
+        </section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 50px; font-weight:bold;">monkey langとは</p>
+            <p><a href="https://www.oreilly.co.jp/books/9784873118222/">Go言語でつくるインタプリタ</a>で作れる言語</p>
+            <p><a href="https://github.com/tsuyoshiwada/rs-monkey-lang">既にRustで書いている人</a>がいるので</p>
+            <p>最終産物だけ今回は変えてみようと試みました(現在作成中)</p>
+          </script>
+        </section>
+
+				<section style="text-align:left; width:100%; display:block;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 50px; font-weight:bold;">どうやるの?</p>
+            1. lexer
+            2. parser
+            3. evalulation 主にここを変えてllvm-irを出力する
+          </script>
+        </section>
+        
+				<section style="text-align:left; width:100%; display:block;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 50px; font-weight:bold;">何を使うの?</p>
+            <p><a href="https://github.com/tari/llvm-sys.rs">llvm-sys.rs</a>というLLVM C APIのbindingを用いる</p>
+            <p>LLVM自体はCとC++のAPIを提供している</p>
+            <p>極めて薄いので実質C書いているようなものな気がする</p>
+          </script>
+				</section>
+
+        <section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 50px; font-weight:bold;">資料とモチベーション</p>
+            <p>ドキュメントやサンプルはほとんどない</p>
+            <p>CのAPIで探しても少ない。C++を参照するかソースを読みに行った方が良い</p>
+            <p><a href="https://github.com/ponylang/ponyc">ponycが神</a></p>
+            <p>初学者の学習が結構しんどい</p>
+          </script>
+        </section>
+
+        <section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 50px; font-weight:bold;">資料とモチベーション</p>
+            <p>ドキュメントやサンプルはほとんどない</p>
+            <p>CのAPIで探しても少ない。C++を参照するかソースを読みに行った方が良い</p>
+            <p><a href="https://github.com/ponylang/ponyc">ponycが神</a></p>
+            <p>初学者の学習が結構しんどい</p>
+          </script>
+        </section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">default loaderの前に実行されるoptionalなloader</p>
+
+            ~~~js
+            // webpack.config.js
+            {
+                test: '/.js$/',
+                use: [ 'abc-loader', 'def-loader' ]
+            }
+            ~~~
+
+            以下が正しい処理順
+            1. abc-loader -- pitch
+            1. def-loader -- pitch
+            1. (read the sources)
+            1. def-loader -- default
+            1. abc-loader -- default
+          </script>
+        </section>
+
+        <section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">default loaderの前に実行されるoptionalなloader</p>
+
+            <img src="./img/eventBubling.png" />
+
+            <div style="text-align: left;">
+            domのevent bublingからデザインされたもの
+            </div>
+          </script>
+        </section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
+
+            ~~~js
+            module.exports = {
+              pitch: function() {
+                // 値を返すとdefaultまで処理が省略される
+                // 返せる値はStringかBuffer
+                return 'something'
+
+                // 非同期なら 
+                // const callback = this.async();
+                // callback(null, 'something');
+
+                // return      何も返さない(undefind)ならば次のloaderの処理に移る
+              }
+              default: function(sources) {
+                return sources[0]   // Arrayで来るので単純にreturnしているのみ
+              }
+            }
+            ~~~
+          </script>
+        </section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
+
+            <p>例1</p>
+
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.pitch</p><p>return "abc"</p></div>
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.pitch</p><p>(省略)</p></div>
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.loader</p><p>(省略)</p></div>
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.loader</p><p>(省略)</p></div>  
+          </script>
+        </section>
+
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
+
+            <p>例2</p>
+
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader pitch</p><p>return</p></div>
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader pitch</p><p>return "somethingA"</p></div>
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader default</p><p>(省略)</p></div>
+            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader default</p><p>return "somethingB"</p></div>
+          </script>
+        </section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
+            
+            <div style="display:flex; ">
+              <p style="display:block; width:15%;">使用例</p><p>cache-loader</p>
+            </div>
+
+            1. pitch loaderでcacheと依存ファイルのmtimeを比較
+            2. 差異がない場合はcacheを読みこみreturn
+            3. defalult loaderでそれまでの生成物と依存ファイルのpath、mtimeからcacheを作成
+          </script>
+        </section>
+
+        <section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
+
+            <p>mtime … 最終変更時刻 (modify time)</p>
+            <p>最後にファイルを変更した時刻のこと</p>
+            <p>正確にはファイルにwrite(2)、またはtruncate(2)した場合に変更されるもの</p>
+          </script>
+        </section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">この時点ではまだソースは読み込まれていない</p>
+
+            - pathは取得できるので取得はできる(非推奨)
+            - loader-utilsやschema-utilsは使用できるのでoptionなどは取得できる
+            - 第3引数経由で他のloaderに値を渡すことはできる
+          </script>
+        </section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 40px; font-weight:bold;">この時点ではまだソースは読み込まれていない</p>
+
+            - 正直cache-loaderくらいしか第3引数を使っているloaderを見かけない
+            - cacheの依存情報やfileがコンパイル中に変更されていないか確認するために使用している
+            - そもそもpitch loader自体ほとんど使われてない(script-loader, style-loaderとか)
+          </script>
+        </section>
+
+				<section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            ### まとめ
+
+            <p style="font-size: 40px; font-weight:bold;">使う機会はあるのか?</p>
+
+            - webpackに対してはないかもしれない
+            - しかしフェイズを2つに分けて、片方ではcache管理などを行うという設計の仕方は使えそう
+            - ~~まぁその時楽しめれば良いよね~~
+            - [awesome-prettier-loader](https://github.com/rchaser53/awesome-prettier-loader)が作成できた!
+          </script>
+        </section>
+
+				<section style="text-align:left;">
+          <p>参考リンク</p>
+          <p>
+            <a href="https://webpack.js.org/contribute/writing-a-loader/">公式ページ(かなり充実している)</a>
+          </p>
+          <p>
+            <a href="https://github.com/webpack/webpack/issues/360">Documentation for pitch vs normal loader isn't very clear</a>
+          </p>
+          <p>
+            <a href="http://x68000.q-e-d.net/~68user/unix/pickup?%A5%BF%A5%A4%A5%E0%A5%B9%A5%BF%A5%F3%A5%D7">UNIX/Linuxの部屋 用語集:タイムスタンプ</a>
+          </p>
+          <p>
+            <a href="https://github.com/webpack-contrib/cache-loader/blob/master/src/index.js">cache-loader</a>
+          </p>
+        </section>
+
+				<section style="text-align:left;">
+					<h2>ご静聴ありがとうございました!</h2>
+				</section>
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+
+			// More info https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// More info https://github.com/hakimel/reveal.js#dependencies
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true },
+					{ src: 'plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>

@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>reveal.js – The HTML Presentation Framework</title>
+
+		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+		<meta name="author" content="Hakim El Hattab">
+
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/black.css" id="theme">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<p style="font-size:46px;">Rustからwasmを作成してみた話</p>
+					<p><a href="https://twitter.com/rChaser53">@rchaser53</a></p>
+					<img alt="" src="./img/neko.jpg" />
+				</section>
+
+				<section>
+					<h2>caution!</h2>
+					<p>発表内容は発表者の独自調査によるものです</p>
+					<p>間違ってたらすみません</p>
+				</section>
+
+				<section>
+					<h2>tl;dr;</h2>
+					<p>現状Emscriptenでwasmを作成したいのであれば</p>
+					<p>LLVMやemccの知識が大なり小なり必要</p>
+				</section>
+
+				<section>
+					<h2>はじめに</h2>
+					<a href="https://github.com/rchaser53/rust_pack_man">
+						勉強ついでに作ったRustのゲーム
+					</a>
+					<p>EmscriptenでWeb Assembly(wasm)に変換してみました</p>
+				</section>
+
+				<section style="text-align:left;">
+					<p>出てくる単語の概要</p>
+					<div style="display:flex; justify-content: space-between;">
+						<p>SDL2</p><p>ゲームエンジンとして使用</p>
+					</div>
+					<div style="display:flex; justify-content: space-between;">
+						<p>Rust</p><p>wasmの変換元のアプリを作るのに使用</p>
+					</div>
+					<div style="display:flex; justify-content: space-between;">
+						<p>Cargo</p><p>Rustからwasmを作成するのに使用</p>
+					</div>
+					<div style="display:flex; justify-content: space-between;">
+						<p>Emscripten</p><p>wasmに変換するのに使用</p>
+					</div>
+					<div style="display:flex; justify-content: space-between;">
+						<p>LLVM</p><p>コンパイラ基盤。中間コード作成に使用</p>
+					</div>
+				</section>
+
+				<section style="text-align:left;">
+					<p>SDL2</p>
+					<p>Simple DirectMedia Layer 2</p>
+					<li>クロスプラットフォームの開発ライブラリ</li>
+					<li>OpenGlや様々なハードウェアへアクセスに使用</li>
+					<p>例. オーディオ, キーボード, マウス etc...</p>
+				</section>
+
+				<section style="text-align:left;">
+					<p>Rust</p>
+					<p>今回重要なこと</p>
+					<li>LLVM上に構築されている言語</li>
+					<li>公式がwasmやasm.jsにビルドする機能を提供</li>
+				</section>
+
+				<section style="text-align:left;">
+					<p>Cargo</p>
+					<p>Rustのビルドシステム兼パッケージマネージャ</p>
+					<p>以下のような形でビルド対象を変更することができる</p>
+					<p>(Rust付属のrustcでもできる)</p>
+					<code class="hljs" data-trim contenteditable># asm.js</code>
+					<code class="hljs" data-trim contenteditable>
+						$ cargo build --target asmjs-unknown-emscripten
+					</code>
+					<code class="hljs" data-trim contenteditable></code>
+					<code class="hljs" data-trim contenteditable># wasm</code>
+					<code class="hljs" data-trim contenteditable>
+						$ cargo build --target wasm32-unknown-emscripten
+					</code>
+				</section>
+
+				<section style="text-align:left;">
+					<p>Rust単体でwasmのビルドは不可</p>
+					<p>bit codeからwasmに変換するEmscriptenが必要</p>
+				</section>
+
+				<section style="text-align:left;">
+					<p>Emscripten</p>
+					<p>bit codeからasm.jsやwasmに変換できるコンパイラー</p>
+					<div style="width:100%; text-align:center;">
+						<img alt="" src="img/EmscriptenToolchain.png" />
+					</div>
+				</section>
+
+				<section style="text-align:left;">
+					<p>Emscripten Compiler Frontend (emcc)</p>
+					<li>標準的なコンパイラーの代替を目指したもの</li>
+					<li>CとかC++からwasmを作る際にはこれ単体でOK</li>
+
+					<code class="hljs" data-trim contenteditable>
+						$ emcc [options] file...
+					</code>	
+				</section>
+
+				<section style="text-align:left;">
+					<p>Emscripten Ports</p>
+					<a href="https://github.com/emscripten-ports">Emscripten用の便利ライブラリ集</a>
+					<li>現在12個しかない…</li>
+					<li>使用する際は以下のようにportを開ける</li>
+					<code class="hljs" data-trim contenteditable>
+						$ export EMMAKEN_CFLAGS="-s USE_SDL=2"
+					</code>
+				</section>
+
+				<section style="text-align:left;">
+					<p>LLVM</p>
+					<li>様々な言語に対応可能なコンパイラ基盤</li>
+					<li>VMやClangなど様々なサブプロジェクトが存在</li>
+					<li>今回はRustの中間コード(*.bc,*.o)への変換に使用</li>
+				</section>
+
+				<section>
+						<section style="text-align:center;">	
+							<div style="display:flex;">
+								<div>
+									<p>Rust製</p>
+									<img src="img/packman.gif" />
+								</div>
+								<div>
+									<p>wasm</p>
+									<img src="img/wasm.gif" />
+								</div>
+							</div>
+						</section>
+	
+						<section style="text-align:center;">
+							<p>色々おかしい</p>
+							<p>BGM、効果音がない</p>
+							<p>そもそも円じゃない</p>
+						</section>
+					</section>
+
+				<section style="text-align:left;">
+					<p>問題点</p>
+					<li>BGM、効果音がない</li>
+					<p>=> emccが正しく変換できていないっぽい</p>
+
+					<li>そもそも円じゃない</li>
+					<p>=> 必要な依存ライブラリがEmscripten Portsにない</p>
+				</section>
+
+				<section style="text-align:left;">
+					<section>
+						<p>BGM、効果音がない</p>
+						<li>Emscriptenが上手く動いていない</li>
+						<li>Fileの読み込みまでは成功</p>
+						<li>rwopsがnullになってしまっている模様</li>
+					</section>
+
+					<section>
+						<p>ちなみに…</p>
+						<p>作成したアプリはtxtファイルからmapを作成している</p>
+						<p>任意にmapは変更できる</p>
+						<p>=> ファイルを読み込むこと自体はできている模様</p>
+					</section>
+				</section>
+
+				<section style="text-align:left;">
+					<p>FS</p>
+					<li>Emscriptenが提供する仮想FileSystem</li>
+					<li>Linux/POSIX File Systemとほぼ同様のinterface</li>
+					<li>CやC++なら以下のような形でemccが使える</li>
+					<code class="hljs" data-trim contenteditable>
+						$ emcc file.cpp -o file.html --preload-file ../../asset_dir@/
+					</code>
+
+					<div style="display:block; height:15px;"></div>
+					<p>emcc単体ではRustからwasmに変換できない…</p>
+					<p>rustcやcargoなどで中間コードを作成する必要がある</p>
+				</section>
+
+				<section style="text-align:left;">
+					<p>しかし…</p>
+					<p>cargoから--preload-fileのオプションをemccに渡せない</p>
+					<p>=> js上からファイルを読み込ませる</p>
+					<pre>
+						<code class="hljs" data-trim contenteditable>
+							var Module = {
+	prerun: [function () {
+		FS.createPreloadedFile(
+			'/',
+			'text1.txt',
+			'/text2.txt',
+			true,
+			false
+		)
+	}]
+}
+						</code>
+					</pre>	
+				</section>
+
+				<section>
+					<p style="display:block; width:100%; text-align:left; margin-left: 10px;">公式の見解は?</p>
+					<a href="https://github.com/kripken/emscripten/issues/3985">
+						Emscripten用のビルドスクリプトは作ってくれている
+					</a>
+					<p>新しいversionがrust-sdl2に取り込まれれば動くだろう</p>
+					<img src="img/ThankYoufdelapena.png" />
+				</section>
+
+				<section style="text-align:left;">
+					<p>そもそも円じゃない</p>
+
+					<p>Emscripten Portsに</p>
+					<p>線や円などを描画するライブラリ「SDL2_gfx」がない</p>
+					<p>=> SDL2_gfxを外してSDL2が描画できる矩形で代用</p>
+				</section>
+
+				<section style="text-align:left;">
+					<p>自力でemscripten用のビルドスクリプトを書くしかない</p>
+
+					<li>cargoはrustcでを実行した後にemccを呼び出している</li>
+					<li>emccが読めるインプット(*.bc, *.oなど)にrustcで変換</li>
+					<li>emccが読めるライブラリをビルドして読み込ませる</li>
+					<img src="img/errorForSDL2_gfx.png" />
+				</section>
+
+				<section style="text-align:left;">
+					<section style="text-align:left;">
+						<p>まとめというか感想</p>
+
+						<li>単純な変換なら特に問題なさそう</li>
+						<li>ただし使えるライブラリがほぼない</li>
+						<li>自力でEmscripten用ライブラリをビルドする必要あり</li>
+						<li>LLVMとemccの知識が必須</li>
+					</section>
+
+					<section style="text-align:left;">
+						<p>まとめというか感想</p>
+						<li>リベンジとして後日、別途公開します</li>
+					</section>
+				</section>
+
+				<section style="text-align:left;">
+					<h2>ご静聴ありがとうございました!</h2>
+				</section>
+
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+
+			// More info https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// More info https://github.com/hakimel/reveal.js#dependencies
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true },
+					{ src: 'plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
