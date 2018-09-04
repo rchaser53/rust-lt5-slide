@@ -259,86 +259,206 @@
 
 
         <section>
-            <section style="text-align:left;" data-markdown>
+          <section style="text-align:left;" data-markdown>
+            ### LLVM IRのGEP
+            
+            - ArrayやStructのsubelementのアドレスを取得する
+            - 引数のパターンはいくらかある
+            - llvm-sys.rsから出力できないパターンは割愛
+
+            ```
+              ; 型, 型のポインタ 変数, index1, index2, ...(以下状況によって変更)
+              getelementptr %[12 x i8], %[12 x i8]* %local_str, i32 0, i32 0
+            ```
+
+            型, 型のポインタはわかるけど、indexは何?
+
+            => ArrayやStructで考えてみる
+          </section>
+
+          <section style="text-align:left;" data-markdown>
+              ### LLVM IRのGEP(Array)
+
+              ```
+              // こんな感じのArrayの値が取得したい
+              int temp_array[4][4];
+              temp_array[1][3];
+              ```
+
+              ```
+                ; グローバルで上記の型を宣言
+                %array_type = type [4 x [4 x i8]]
+
+                define i8* @test_array_gep(%array_type* %a) {
+                  entry:
+                    %ret_val = getelementptr %array_type, %array_type* %a, i32 0, i32 1, i32 3
+                    ret i8* %ret_val
+                }
+              ```
+          </section>
+
+          <section style="text-align:left;" data-markdown>
+            ### LLVM IRのGEP(Struct)
+
+            ```
+            // こんな感じのStructの値が取得したい
+            struct temp_struct {
+              char a;
+              int b
+              int c[4];
+            };
+            temp_struct.b
+            ```
+
+            ```
+              ; グローバルで上記の型を宣言
+              %struct_type = type { i8, i32, [4 x i8] }
+
+              define i32* @test_stuct_gep(%struct_type* %s) {
+                entry:
+                  ; 直接field名を指定するのではなく、肩の宣言した順番を記述する
+                  ; bは2つ目に宣言したので1
+                  %ret_val = getelementptr %struct_type, %struct_type* %s, i32 0, i32 1
+                  ret i32* %ret_val
+              }
+            ```
+          </section>
+
+          <section style="text-align:left;" data-markdown>
               ### LLVM IRのGEP
-              
-              - ArrayやStructのsubelementのアドレスを取得する
-              - 引数のパターンはいくらかある
-              - llvm-sys.rsから出力できないパターンは割愛
 
               ```
-                ; 型, 型のポインタ 変数, index1, index2, ...(以下状況によって変更)
-                getelementptr %[12 x i8], %[12 x i8]* %local_str, i32 0, i32 0
+              ; 型, 型のポインタ 変数, index1, index2, ...(以下状況によって変更)
+              getelementptr %[12 x i8], %[12 x i8]* %local_str, i32 0, i32 0
               ```
 
-              型, 型のポインタはわかるけど、indexは何?
+              常にindex1が0にならない…?
+          </section>
 
-              => ArrayやStructで考えてみる
-            </section>
+          <section style="text-align:left;" data-markdown>
+              ### LLVM IRのGEP
 
-            <section style="text-align:left;" data-markdown>
-                ### LLVM IRのGEP(Array)
+              index1が0以外のケース。ないことはないらしい…
 
-                ```
-                // こんな感じのArrayの値が取得したい
-                int temp_array[4][4];
-                temp_array[1][3];
-                ```
-
-                ```
-                  ; グローバルで上記の型を宣言
-                  %array_type = type [4 x [4 x i8]]
-
-                  define i8* @test_array_gep(%array_type* %a) {
-                    entry:
-                      %ret_val = getelementptr %array_type, %array_type* %a, i32 0, i32 1, i32 3
-                      ret i8* %ret_val
-                  }
-                ```
-              </section>
-
-              <section style="text-align:left;" data-markdown>
-                ### LLVM IRのGEP(Struct)
-
-                ```
-                // こんな感じのStructの値が取得したい
-                struct temp_struct {
-                  char a;
-                  int b
-                  int c[4];
+              ```
+                // Cのソース
+                struct munger_struct {
+                  int f1;
+                  int f2;
                 };
-                temp_struct.b
-                ```
 
-                ```
-                  ; グローバルで上記の型を宣言
-                  %struct_type = type { i8, i32, [4 x i8] }
+                void munge(struct munger_struct *P) {
+                  P[0].f1 = P[1].f1 + P[2].f2;
+                }
+              ```
 
-                  define i32* @test_stuct_gep(%struct_type* %s) {
-                    entry:
-                      ; 直接field名を指定するのではなく、肩の宣言した順番を記述する
-                      ; bは2つ目に宣言したので1
-                      %ret_val = getelementptr %struct_type, %struct_type* %s, i32 0, i32 1
-                      ret i32* %ret_val
-                  }
-                ```
-              </section>
+              ```
+              ; LLVM IR
+              void %munge(%struct.munger_struct* %P) {
+                entry:
+                  %tmp = getelementptr %struct.munger_struct, %struct.munger_struct* %P, i32 1, i32 0
+                  %tmp = load i32* %tmp
+                  %tmp6 = getelementptr %struct.munger_struct, %struct.munger_struct* %P, i32 2, i32 1
+                  %tmp7 = load i32* %tmp6
+                  %tmp8 = add i32 %tmp7, %tmp
+                  %tmp9 = getelementptr %struct.munger_struct, %struct.munger_struct* %P, i32 0, i32 0
+                  store i32 %tmp8, i32* %tmp9
+                  ret void
+              }
+              ```
+          </section>
+        </section>
 
-              <section style="text-align:left;" data-markdown>
-                  ### LLVM IRのGEP
-
-                  ```
-                  ; 型, 型のポインタ 変数, index1, index2, ...(以下状況によって変更)
-                  getelementptr %[12 x i8], %[12 x i8]* %local_str, i32 0, i32 0
-                  ```
-
-                  常にindex1が0にならない…?
-              </section>
+      <section>
+        <section style="text-align:left;" data-markdown>
+          ### llvm-sys.rs
+            - 単純に動かすだけならサンプルを参考にすれば良いと思う
+            - unsafeとか生ポインタとかの話は割愛
+            - LLVMBuildGEPについての説明をする
         </section>
 
         <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 50px; font-weight:bold;">llvm-c apiではどうなっている</p>
+            ### 作成するLLVM IR
+
+            ```
+            %local_str = alloca [12 x i8]
+            store [12 x i8] c"hello world\00", [12 x i8]* %local_str
+            %input_puts = getelementptr [12 x i8], [12 x i8]* %local_str, i32 0, i32 0
+            ```
+        </section>
+
+        <section style="text-align:left;" data-markdown>
+            以下Rustのコード
+
+            - 長いし読みにくいので実際のコードの[リンク]()貼ります
+            - 次のスライドでgetelementptrだけ説明します
+
+```
+pub fn codegen_string(
+  builder: *mut LLVMBuilder,
+  context: *mut LLVMContext,
+  input_str: &str,
+) -> *mut LLVMValue {
+
+    let length = input_str.len() as u32;
+
+    unsafe {
+        // %local_str = alloca [12 x i8]
+        let llvm_value = LLVMBuildAlloca(
+                      builder,
+                      LLVMArrayType(LLVMInt8Type(), length),
+                      c_string!("").as_ptr(),
+        );
+
+        // store [12 x i8] c"hello world\00", [12 x i8]* %local_str
+        let str_val = LLVMConstStringInContext(
+          context,
+          c_string!(input_str).as_ptr(),
+          length - 1,
+          0
+        );
+        LLVMBuildStore(builder, str_val, llvm_value);
+
+        // 以下getelementptrのとこを作る
+        let mut args = [
+                      LLVMConstInt(LLVMInt32Type(), 0, 0),
+                      LLVMConstInt(LLVMInt32Type(), 0, 0),
+        ];
+
+        return LLVMBuildGEP(
+                      builder,
+                      llvm_value,
+                      args.as_mut_ptr(),
+                      args.len(),
+                      CString::new("").unwrap().as_ptr(),
+        );
+    }
+}
+```
+        </section>
+        <section style="text-align:left;" data-markdown>
+          ##### お作法なので知ってしまえば簡単
+```
+// 「getelementptr [12 x i8], [12 x i8]* %local_str, i32 0, i32 0」の
+// 「i32 0, i32 0」のところ
+let mut args = [
+  LLVMConstInt(LLVMInt32Type(), 0, 0),
+  LLVMConstInt(LLVMInt32Type(), 0, 0),
+];
+
+return LLVMBuildGEP(
+  builder,
+  llvm_value,        // ArrayとかStructとか
+  args.as_mut_ptr(),
+  args.len(),         // 第3引数のlength。引数として指定する意味がわからない
+  CString::new("").unwrap().as_ptr(), // 空文字の場合、勝手に変数名が生成される
+);
+
+```
+
+        </section>
+
+      </section>
             #### 主に3つ提供されている様子
             - LLVMBuildGEP
             - LLVMBuildInBoundsGEP(存在しないアドレスを参照した際にエラーになる)
