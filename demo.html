@@ -53,6 +53,12 @@
           - プリントデバッグに必要な知識だから仕方ないね
           - llvm-irをこれから触る方の足しになれば幸いです
         </section>
+<!-- 
+        <section style="text-align:left;" data-markdown>
+          ### 前座が長いので本題だけ見たい方は
+          - ページまでジャンプ
+          - レポジトリを参照
+        </section> -->
 
         <section style="text-align:left;" data-markdown>
           <script type="text/template">
@@ -436,6 +442,7 @@ pub fn codegen_string(
 }
 ```
         </section>
+
         <section style="text-align:left;" data-markdown>
           ##### お作法なので知ってしまえば簡単
 ```
@@ -457,168 +464,52 @@ return LLVMBuildGEP(
 ```
 
         </section>
-
       </section>
-            #### 主に3つ提供されている様子
-            - LLVMBuildGEP
-            - LLVMBuildInBoundsGEP(存在しないアドレスを参照した際にエラーになる)
-            - LLVMBuildStructGEP
 
-            LLVMBuildInBoundsGEPについて説明する
-          </script>
-        </section>
-
+      <section>
         <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 40px; font-weight:bold;">LLVMBuildInBoundsGEP</p>
-            リファレンス見ても初見では全く分からなかったので、雑にまとめます
+            ### まとめ1
+  
+            #### getelementptrについて
 
-            2と3については次のスライドで詳しく
-
-            1. llvm builderのref
-            1. StructsやArraysのvalueのref
-            1. 参照するIndexのArrayをllvm value
-            1. 3のlength
-            1. 作成する変数名(空文字だと自動生成)
-          </script>
-        </section>
-
-        <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 40px; font-weight:bold;">default loaderの前に実行されるoptionalなloader</p>
-
-
-            ~~~js
-              let abc = [0, 1, 2, 3];
-
-            ~~~
-
-
-          </script>
-        </section>
-
-        <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
-
-            ~~~js
-            module.exports = {
-              pitch: function() {
-                // 値を返すとdefaultまで処理が省略される
-                // 返せる値はStringかBuffer
-                return 'something'
-
-                // 非同期なら 
-                // const callback = this.async();
-                // callback(null, 'something');
-
-                // return      何も返さない(undefind)ならば次のloaderの処理に移る
-              }
-              default: function(sources) {
-                return sources[0]   // Arrayで来るので単純にreturnしているのみ
-              }
-            }
-            ~~~
-          </script>
-        </section>
-
-        <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
-
-            <p>例1</p>
-
-            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.pitch</p><p>return "abc"</p></div>
-            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.pitch</p><p>(省略)</p></div>
-            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader.loader</p><p>(省略)</p></div>
-            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader.loader</p><p>(省略)</p></div>  
-          </script>
-        </section>
-
-
-        <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
-
-            <p>例2</p>
-
-            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader pitch</p><p>return</p></div>
-            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader pitch</p><p>return "somethingA"</p></div>
-            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">def-loader default</p><p>(省略)</p></div>
-            <div style="display:flex; height:60px; padding-bottom:10px; background-color:#777; width:100%;"><p style="width:50%;">abc-loader default</p><p>return "somethingB"</p></div>
-          </script>
-        </section>
-
-        <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
+            - 慣れればそこまで難しいものではないと思う
+            - 使えないとほぼ何もできないので勉強できて良かった
+            - CのAPI使われてなさすぎな気がするのだけど何故?
             
-            <div style="display:flex; ">
-              <p style="display:block; width:15%;">使用例</p><p>cache-loader</p>
-            </div>
-
-            1. pitch loaderでcacheと依存ファイルのmtimeを比較
-            2. 差異がない場合はcacheを読みこみreturn
-            3. defalult loaderでそれまでの生成物と依存ファイルのpath、mtimeからcacheを作成
-          </script>
-        </section>
+        </section>  
 
         <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 40px; font-weight:bold;">値を返すとdefault loaderまで処理が省略される</p>
-
-            <p>mtime … 最終変更時刻 (modify time)</p>
-            <p>最後にファイルを変更した時刻のこと</p>
-            <p>正確にはファイルにwrite(2)、またはtruncate(2)した場合に変更されるもの</p>
-          </script>
-        </section>
-
-        <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 40px; font-weight:bold;">この時点ではまだソースは読み込まれていない</p>
-
-            - pathは取得できるので取得はできる(非推奨)
-            - loader-utilsやschema-utilsは使用できるのでoptionなどは取得できる
-            - 第3引数経由で他のloaderに値を渡すことはできる
-          </script>
-        </section>
-
-      <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 40px; font-weight:bold;">この時点ではまだソースは読み込まれていない</p>
-
-            - 正直cache-loaderくらいしか第3引数を使っているloaderを見かけない
-            - cacheの依存情報やfileがコンパイル中に変更されていないか確認するために使用している
-            - そもそもpitch loader自体ほとんど使われてない(script-loader, style-loaderとか)
-          </script>
-        </section>
-
-        <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            ### まとめ
-
-            <p style="font-size: 40px; font-weight:bold;">使う機会はあるのか?</p>
-
-            - webpackに対してはないかもしれない
-            - しかしフェイズを2つに分けて、片方ではcache管理などを行うという設計の仕方は使えそう
+            ### まとめ2
+  
+            #### llvm-sys.rsでLLVM IRを出力する意味はあるのか?
+  
+            - あまりなさそう。RustでLLVM IRを出力すれば良さそうな気はする
+            - しかしLLVM IRについて知れたのは良いことなのでは?
             - ~~まぁその時楽しめれば良いよね~~
-            - [awesome-prettier-loader](https://github.com/rchaser53/awesome-prettier-loader)が作成できた!
-          </script>
+            
         </section>
+      </section>
 
-				<section style="text-align:left;">
+
+        <section style="text-align:left;">
           <p>参考リンク</p>
           <p>
-            <a href="https://webpack.js.org/contribute/writing-a-loader/">公式ページ(かなり充実している)</a>
+            <a href="https://llvm.org/docs/LangRef.html#getelementptr-instruction">公式reference</a>
           </p>
           <p>
-            <a href="https://github.com/webpack/webpack/issues/360">Documentation for pitch vs normal loader isn't very clear</a>
+            <a href="https://llvm.org/docs/GetElementPtr.html">公式のGetElementPtrの詳細な解説</a>
           </p>
           <p>
-            <a href="http://x68000.q-e-d.net/~68user/unix/pickup?%A5%BF%A5%A4%A5%E0%A5%B9%A5%BF%A5%F3%A5%D7">UNIX/Linuxの部屋 用語集:タイムスタンプ</a>
+            <a href="https://github.com/ponylang/ponyc">ponycのレポジトリ(困ったら読む)</a>
           </p>
           <p>
-            <a href="https://github.com/webpack-contrib/cache-loader/blob/master/src/index.js">cache-loader</a>
+            <a href="http://www.aosabook.org/en/llvm.html#fig.llvm.lcom">The Architecture of Open Source ApplicationsのLLVM</a>
+          </p>
+          <p>
+            <a href="https://en.wikipedia.org/wiki/Compiler#Three-stage_compiler_structure">Three-stage_compiler_structure</a>
+          </p>
+          <p>
+            <a href="https://tatsu-zine.com/books/llvm">きつねさんでもわかるLLVM</a>
           </p>
         </section>
 
