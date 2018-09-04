@@ -42,35 +42,42 @@
       <!-- Any section element inside of this container is displayed as a slide -->
       <div class="slides">
         <section>
-          <p style="font-size:60px;">rustでllvm-ir(hello world編)</p>
+          <p style="font-size:60px;">RustでLLVM IR入門</p>
           <p><a href="https://twitter.com/rChaser53">@rchaser53</a></p>
           <img alt="" src="./img/neko.jpg" />
         </section>
 
         <section style="text-align:left;" data-markdown>
-          - [llvm-sys.rs](https://github.com/tari/llvm-sys.rs)を用いてllvm-irでhello worldする話です
-          - 思いの外hello worldまで長かったので書きました
-          - プリントデバッグに必要な知識だから仕方ないね
-          - llvm-irをこれから触る方の足しになれば幸いです
+          ### 誰?
+            - 職業: ~~雑用~~ webエンジニア
+            - 名前: 吉澤 峻行
+
+            最近はVueとかGoとか
+
+            ![](./img/neko.jpg)
         </section>
-<!-- 
-        <section style="text-align:left;" data-markdown>
-          ### 前座が長いので本題だけ見たい方は
-          - ページまでジャンプ
-          - レポジトリを参照
-        </section> -->
 
         <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 50px; font-weight:bold;">LLVMとは?</p>
-            <p>コンパイラ基盤を作るプロジェクト</p>
-            <p>ツールチェーンやコンパイラ、モジュールなどを提供</p>
-            <p>RustもLLVMを使用している</p>
-            
-            <p style="text-align:center;">
-              <img alt="" src="./img/RetargetableCompiler.png" />
-            </p>
-          </script>
+          - [llvm-sys.rs](https://github.com/tari/llvm-sys.rs)を用いてhello worldする話です
+          - 思いの外hello worldで苦戦したので書きました
+          - プリントデバッグに必要な知識だから仕方ないね
+          - LLVM IRをこれから触る方の足しになれば幸いです
+        </section>
+
+        <section style="text-align:left;" data-markdown>
+          ### 前座が長いので本題だけ見たい方は
+          - 14ページまでジャンプ
+          - サンプルの[レポジトリ](git@github.com:rchaser53/llvm-ir-lt-sample.git)
+          - 今回の技術を使う予定の[自作言語](https://github.com/rchaser53/rust-monkey-ir)
+        </section>
+
+        <section style="text-align:left;" data-markdown>
+          ### LLVMとは?
+          - コンパイラ基盤を作るプロジェクト
+          - ツールチェーンやコンパイラ、モジュールなどを提供
+          - RustもLLVMを使用している
+
+          ![](./img/RetargetableCompiler.png)
         </section>
 
         <section>
@@ -140,17 +147,16 @@
         <section style="text-align:left; width:100%; display:block;" data-markdown>
           ### 何が難しい?
             - GetElementPtr(GEP)が難しいと思う
-            - LLVM IR上で直にいじるのにも慣れがいる
             - [公式の専用の解説ページ](https://llvm.org/docs/GetElementPtr.html)まである
+            - LLVM IR上で直にいじるのにも慣れがいる
             - CのAPIやリファレンスが正直わかりにくいのも原因
         </section>
-
 
         <section>
           <section style="text-align:left;" data-markdown>
             ### GEP(GetElementPtr)とは
-            - ArraysやStructsのsubelementのアドレスを取得する
-            - つまりArraysやStructsを操作には必須となる
+            - ArrayやStructのsubelementのアドレスを取得する
+            - つまりArrayやStructを操作する際に把握が必須
             - 文字列はi8のArray。hello worldするにはこいつが必要
           </section>
         </section>
@@ -218,11 +224,11 @@
               define i32 @main(i32, i8**) {
 
               entry:
-                ; レジスタ上に初期化する
+                ; メモリを確保する
                 ; [12 x i8]は要素が12のArray
                 %local_str = alloca [12 x i8]
 
-                ; レジスタに値を設定する
+                ; 確保したメモリに値を設定する
                 ; 基本的に「型 値」みたいな形で記述する
                 ; (例) [12 x i8] c"hello world\00"
                 store [12 x i8] c"hello world\00", [12 x i8]* %local_str
@@ -378,7 +384,7 @@
       <section>
         <section style="text-align:left;" data-markdown>
           ### llvm-sys.rs
-            - 単純に動かすだけならサンプルを参考にすれば良いと思う
+            - 基本はllvm-sys.rsのexampleを参考にすれば良い
             - unsafeとか生ポインタとかの話は割愛
             - LLVMBuildGEPについての説明をする
         </section>

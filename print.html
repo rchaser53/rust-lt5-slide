@@ -1,289 +1,521 @@
 <!doctype html>
 <html lang="en">
 
-	<head>
-		<meta charset="utf-8">
+  <head>
+    <meta charset="utf-8">
 
-		<title>reveal.js – The HTML Presentation Framework</title>
+    <title>reveal.js – The HTML Presentation Framework</title>
 
-		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
-		<meta name="author" content="Hakim El Hattab">
+    <meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+    <meta name="author" content="Hakim El Hattab">
 
-		<meta name="apple-mobile-web-app-capable" content="yes">
-		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<link rel="stylesheet" href="css/reveal.css">
-		<link rel="stylesheet" href="css/theme/black.css" id="theme">
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/black.css" id="theme">
 
-		<!-- Theme used for syntax highlighting of code -->
-		<link rel="stylesheet" href="lib/css/zenburn.css">
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
 
-		<!-- Printing and PDF exports -->
-		<script>
-			var link = document.createElement( 'link' );
-			link.rel = 'stylesheet';
-			link.type = 'text/css';
-			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
-			document.getElementsByTagName( 'head' )[0].appendChild( link );
-		</script>
+    <!-- Printing and PDF exports -->
+    <script>
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
 
-		<!--[if lt IE 9]>
-		<script src="lib/js/html5shiv.js"></script>
-		<![endif]-->
+    <!--[if lt IE 9]>
+    <script src="lib/js/html5shiv.js"></script>
+    <![endif]-->
 
-	</head>
+  </head>
 
-	<body>
+  <body>
 
-		<div class="reveal">
+    <div class="reveal">
 
-			<!-- Any section element inside of this container is displayed as a slide -->
-			<div class="slides">
-				<section>
-					<p style="font-size:46px;">Rustからwasmを作成してみた話</p>
-					<p><a href="https://twitter.com/rChaser53">@rchaser53</a></p>
-					<img alt="" src="./img/neko.jpg" />
-				</section>
+      <!-- Any section element inside of this container is displayed as a slide -->
+      <div class="slides">
+        <section>
+          <p style="font-size:60px;">rustでllvm-ir(hello world編)</p>
+          <p><a href="https://twitter.com/rChaser53">@rchaser53</a></p>
+          <img alt="" src="./img/neko.jpg" />
+        </section>
 
-				<section>
-					<h2>caution!</h2>
-					<p>発表内容は発表者の独自調査によるものです</p>
-					<p>間違ってたらすみません</p>
-				</section>
+        <section style="text-align:left;" data-markdown>
+          - [llvm-sys.rs](https://github.com/tari/llvm-sys.rs)を用いてllvm-irでhello worldする話です
+          - 思いの外hello worldまで長かったので書きました
+          - プリントデバッグに必要な知識だから仕方ないね
+          - llvm-irをこれから触る方の足しになれば幸いです
+        </section>
 
-				<section>
-					<h2>tl;dr;</h2>
-					<p>現状Emscriptenでwasmを作成したいのであれば</p>
-					<p>LLVMやemccの知識が大なり小なり必要</p>
-				</section>
+        <section style="text-align:left;" data-markdown>
+          ### 前座が長いので本題だけ見たい方は
+          - ページまでジャンプ
+          - サンプルの[レポジトリ](git@github.com:rchaser53/llvm-ir-lt-sample.git)
+          - 今回の技術を使う予定の[自作言語](https://github.com/rchaser53/rust-monkey-ir)
+        </section>
 
-				<section>
-					<h2>はじめに</h2>
-					<a href="https://github.com/rchaser53/rust_pack_man">
-						勉強ついでに作ったRustのゲーム
-					</a>
-					<p>EmscriptenでWeb Assembly(wasm)に変換してみました</p>
-				</section>
+        <section style="text-align:left;" data-markdown>
+          <script type="text/template">
+            <p style="font-size: 50px; font-weight:bold;">LLVMとは?</p>
+            <p>コンパイラ基盤を作るプロジェクト</p>
+            <p>ツールチェーンやコンパイラ、モジュールなどを提供</p>
+            <p>RustもLLVMを使用している</p>
+            
+            <p style="text-align:center;">
+              <img alt="" src="./img/RetargetableCompiler.png" />
+            </p>
+          </script>
+        </section>
 
-				<section style="text-align:left;">
-					<p>出てくる単語の概要</p>
-					<div style="display:flex; justify-content: space-between;">
-						<p>SDL2</p><p>ゲームエンジンとして使用</p>
-					</div>
-					<div style="display:flex; justify-content: space-between;">
-						<p>Rust</p><p>wasmの変換元のアプリを作るのに使用</p>
-					</div>
-					<div style="display:flex; justify-content: space-between;">
-						<p>Cargo</p><p>Rustからwasmを作成するのに使用</p>
-					</div>
-					<div style="display:flex; justify-content: space-between;">
-						<p>Emscripten</p><p>wasmに変換するのに使用</p>
-					</div>
-					<div style="display:flex; justify-content: space-between;">
-						<p>LLVM</p><p>コンパイラ基盤。中間コード作成に使用</p>
-					</div>
-				</section>
+        <section>
+          <section style="text-align:left;" data-markdown>
+            ### LLVM IRとは?
+            - LLVMはThree-stage compiler structureを採用している
+            - LLVM IRは各フェイズ間のデータのやりとりに使う
+          </section>
 
-				<section style="text-align:left;">
-					<p>SDL2</p>
-					<p>Simple DirectMedia Layer 2</p>
-					<li>クロスプラットフォームの開発ライブラリ</li>
-					<li>OpenGlや様々なハードウェアへアクセスに使用</li>
-					<p>例. オーディオ, キーボード, マウス etc...</p>
-				</section>
+          <section style="text-align:left;" data-markdown>
+            ### Three-stage compiler structure
+            複数のフェイズに分けて開発するコンパイラの設計方法
+            
+            - フロントエンド
+              - パース, エラーチェック、ASTの生成など
+            - ミドルエンド(Optimizer)
+              - 最適化、高速化など
+            - バックエンド
+              - 各プラットフォーム向けの最終産物の生成など
+            
+            IRを用いて各フェイズでデータのやり取りをする
+          </section>
 
-				<section style="text-align:left;">
-					<p>Rust</p>
-					<p>今回重要なこと</p>
-					<li>LLVM上に構築されている言語</li>
-					<li>公式がwasmやasm.jsにビルドする機能を提供</li>
-				</section>
+          <section style="text-align:left;" data-markdown>
+            ### LLVM IRとは?
+            
+            こんな感じで各フェイズ間のデータのやりとりに使う
+            
+            ![](./img/LLVMCompiler1.png)
 
-				<section style="text-align:left;">
-					<p>Cargo</p>
-					<p>Rustのビルドシステム兼パッケージマネージャ</p>
-					<p>以下のような形でビルド対象を変更することができる</p>
-					<p>(Rust付属のrustcでもできる)</p>
-					<code class="hljs" data-trim contenteditable># asm.js</code>
-					<code class="hljs" data-trim contenteditable>
-						$ cargo build --target asmjs-unknown-emscripten
-					</code>
-					<code class="hljs" data-trim contenteditable></code>
-					<code class="hljs" data-trim contenteditable># wasm</code>
-					<code class="hljs" data-trim contenteditable>
-						$ cargo build --target wasm32-unknown-emscripten
-					</code>
-				</section>
+            - 以下でRustでも見れる
+              - cargo rustc -- --emit=llvm-ir
+          </section>
+        </section>
 
-				<section style="text-align:left;">
-					<p>Rust単体でwasmのビルドは不可</p>
-					<p>bit codeからwasmに変換するEmscriptenが必要</p>
-				</section>
+        <section>
+          <section style="text-align:left;" data-markdown>
+            ### 背景
+            - [Go言語でつくるインタプリタ](https://www.oreilly.co.jp/books/9784873118222/)をRustで書いてる
+            - [もうやった人いる](https://github.com/tsuyoshiwada/rs-monkey-lang)
+            - じゃあ改良して任意のLLVM IRを出力してみよう
+          </section>
 
-				<section style="text-align:left;">
-					<p>Emscripten</p>
-					<p>bit codeからasm.jsやwasmに変換できるコンパイラー</p>
-					<div style="width:100%; text-align:center;">
-						<img alt="" src="img/EmscriptenToolchain.png" />
-					</div>
-				</section>
+          <section style="text-align:left;" data-markdown>
+            ### 背景
+            - hello worldまでの道のりが辛い
+            - 資料らしい資料がない
+            - では自分で書こう(イマココ)
+          </section>
+        </section>
 
-				<section style="text-align:left;">
-					<p>Emscripten Compiler Frontend (emcc)</p>
-					<li>標準的なコンパイラーの代替を目指したもの</li>
-					<li>CとかC++からwasmを作る際にはこれ単体でOK</li>
+        <section style="text-align:left; width:100%; display:block;" data-markdown>
+          ### 何を使うの?
+            - [llvm-sys.rs](https://github.com/tari/llvm-sys.rs)というLLVM IRを出力するモジュールを使う
+            - LLVMはLLVM IRを出力するモジュールを提供している
+            - CとC++版がありllvm-sys.rsはC版をbindingしている
+        </section>
 
-					<code class="hljs" data-trim contenteditable>
-						$ emcc [options] file...
-					</code>	
-				</section>
+        <section style="text-align:left; width:100%; display:block;" data-markdown>
+          ### llvm-sys.rs
+            - 非常に薄い。ほとんどCのAPIと大差ない
+            - ドキュメントやサンプルはほぼない
+            - CのAPIに関しても少ない。C++ならいくらか
+            - 困ったら[ponyc](https://github.com/ponylang/ponyc)を見に行くのをオススメ
+        </section>
 
-				<section style="text-align:left;">
-					<p>Emscripten Ports</p>
-					<a href="https://github.com/emscripten-ports">Emscripten用の便利ライブラリ集</a>
-					<li>現在12個しかない…</li>
-					<li>使用する際は以下のようにportを開ける</li>
-					<code class="hljs" data-trim contenteditable>
-						$ export EMMAKEN_CFLAGS="-s USE_SDL=2"
-					</code>
-				</section>
+        <section style="text-align:left; width:100%; display:block;" data-markdown>
+          ### 何が難しい?
+            - GetElementPtr(GEP)が難しいと思う
+            - LLVM IR上で直にいじるのにも慣れがいる
+            - [公式の専用の解説ページ](https://llvm.org/docs/GetElementPtr.html)まである
+            - CのAPIやリファレンスが正直わかりにくいのも原因
+        </section>
 
-				<section style="text-align:left;">
-					<p>LLVM</p>
-					<li>様々な言語に対応可能なコンパイラ基盤</li>
-					<li>VMやClangなど様々なサブプロジェクトが存在</li>
-					<li>今回はRustの中間コード(*.bc,*.o)への変換に使用</li>
-				</section>
+        <section>
+          <section style="text-align:left;" data-markdown>
+            ### GEP(GetElementPtr)とは
+            - ArraysやStructsのsubelementのアドレスを取得する
+            - つまりArraysやStructsを操作には必須となる
+            - 文字列はi8のArray。hello worldするにはこいつが必要
+          </section>
+        </section>
 
-				<section>
-						<section style="text-align:center;">	
-							<div style="display:flex;">
-								<div>
-									<p>Rust製</p>
-									<img src="img/packman.gif" />
-								</div>
-								<div>
-									<p>wasm</p>
-									<img src="img/wasm.gif" />
-								</div>
-							</div>
-						</section>
-	
-						<section style="text-align:center;">
-							<p>色々おかしい</p>
-							<p>BGM、効果音がない</p>
-							<p>そもそも円じゃない</p>
-						</section>
-					</section>
+        <section>
+          <section style="text-align:left;" data-markdown>
+            ### まずはLLVM IRで出力できるようにする
+            
+            - 拡張子はll。test.llとか作れば良い
+            - LLVMのツールチェーンであるlliを用いて実行すると楽
 
-				<section style="text-align:left;">
-					<p>問題点</p>
-					<li>BGM、効果音がない</li>
-					<p>=> emccが正しく変換できていないっぽい</p>
+            ```
+              $ lli test.ll
+            ```
+            
+          </section>
 
-					<li>そもそも円じゃない</li>
-					<p>=> 必要な依存ライブラリがEmscripten Portsにない</p>
-				</section>
+          <section style="text-align:left; width:100%; display:block;" data-markdown>
+            多分の最小の構成
+            ```
+            define i32 @main(i32, i8**) {
 
-				<section style="text-align:left;">
-					<section>
-						<p>BGM、効果音がない</p>
-						<li>Emscriptenが上手く動いていない</li>
-						<li>Fileの読み込みまでは成功</p>
-						<li>rwopsがnullになってしまっている模様</li>
-					</section>
+            entry:
+              %local_str = alloca [12 x i8]
+              store [12 x i8] c"hello world\00", [12 x i8]* %local_str
+              %input_puts = getelementptr [12 x i8], [12 x i8]* %local_str, i32 0, i32 0
+              call i32 @printf(i8* %input_puts)
+            
+              ret i32 0
+            }
 
-					<section>
-						<p>ちなみに…</p>
-						<p>作成したアプリはtxtファイルからmapを作成している</p>
-						<p>任意にmapは変更できる</p>
-						<p>=> ファイルを読み込むこと自体はできている模様</p>
-					</section>
-				</section>
+            declare i32 @printf(i8*)
+            ```
+          </section>
 
-				<section style="text-align:left;">
-					<p>FS</p>
-					<li>Emscriptenが提供する仮想FileSystem</li>
-					<li>Linux/POSIX File Systemとほぼ同様のinterface</li>
-					<li>CやC++なら以下のような形でemccが使える</li>
-					<code class="hljs" data-trim contenteditable>
-						$ emcc file.cpp -o file.html --preload-file ../../asset_dir@/
-					</code>
+          <section style="text-align:left; width:100%; display:block;" data-markdown>
+            解説1
 
-					<div style="display:block; height:15px;"></div>
-					<p>emcc単体ではRustからwasmに変換できない…</p>
-					<p>rustcやcargoなどで中間コードを作成する必要がある</p>
-				</section>
+            ```
+            ; 頭文字に;がつくとその行はコメント
+            ; @xxxでグローバル変数、 %yyyでローカル変数または型
 
-				<section style="text-align:left;">
-					<p>しかし…</p>
-					<p>cargoから--preload-fileのオプションをemccに渡せない</p>
-					<p>=> js上からファイルを読み込ませる</p>
-					<pre>
-						<code class="hljs" data-trim contenteditable>
-							var Module = {
-	prerun: [function () {
-		FS.createPreloadedFile(
-			'/',
-			'text1.txt',
-			'/text2.txt',
-			true,
-			false
-		)
-	}]
+            ; 戻り値の型 関数名(引数の型1, 引数の型2)
+            define i32 @main(i32, i8**) {
+              
+            ; エントリポイントとなるラベル。必須
+            entry:
+              %local_str = alloca [12 x i8]
+              store [12 x i8] c"hello world\00", [12 x i8]* %local_str
+              %input_puts = getelementptr [12 x i8], [12 x i8]* %local_str, i32 0, i32 0
+              call i32 @printf(i8* %input_puts)
+            
+              ret i32 0
+            }
+
+            
+            declare i32 @printf(i8*)
+            ```
+          </section>
+
+          <section style="text-align:left; width:100%; display:block;" data-markdown>
+              解説2
+  
+              ```
+              define i32 @main(i32, i8**) {
+
+              entry:
+                ; メモリを確保する
+                ; [12 x i8]は要素が12のArray
+                %local_str = alloca [12 x i8]
+
+                ; 確保したメモリに値を設定する
+                ; 基本的に「型 値」みたいな形で記述する
+                ; (例) [12 x i8] c"hello world\00"
+                store [12 x i8] c"hello world\00", [12 x i8]* %local_str
+
+                ; getelementptr(後述)
+                %input_puts = getelementptr [12 x i8], [12 x i8]* %local_str, i32 0, i32 0
+                call i32 @printf(i8* %input_puts)
+              
+                ret i32 0
+              }
+  
+              
+              declare i32 @printf(i8*)
+              ```
+          </section>
+
+          <section style="text-align:left; width:100%; display:block;" data-markdown>
+              解説3
+
+              ```
+              define i32 @main(i32, i8**) {
+
+              entry:
+                %local_str = alloca [12 x i8]
+                store [12 x i8] c"hello world\00", [12 x i8]* %local_str
+                %input_puts = getelementptr [12 x i8], [12 x i8]* %local_str, i32 0, i32 0
+
+                ; 関数呼び出し
+                call i32 @printf(i8* %input_puts)
+                
+                ; return
+                ret i32 0
+              }
+
+              ; 標準ライブラリから呼び出す関数を指定
+              declare i32 @printf(i8*)
+              ```
+          </section>
+        </section>
+
+
+        <section>
+          <section style="text-align:left;" data-markdown>
+            ### LLVM IRのGEP
+            
+            - ArrayやStructのsubelementのアドレスを取得する
+            - 引数のパターンはいくらかある
+            - llvm-sys.rsから出力できないパターンは割愛
+
+            ```
+              ; 型, 型のポインタ 変数, index1, index2, ...(以下状況によって変更)
+              getelementptr %[12 x i8], %[12 x i8]* %local_str, i32 0, i32 0
+            ```
+
+            型, 型のポインタはわかるけど、indexは何?
+
+            => ArrayやStructで考えてみる
+          </section>
+
+          <section style="text-align:left;" data-markdown>
+              ### LLVM IRのGEP(Array)
+
+              ```
+              // こんな感じのArrayの値が取得したい
+              int temp_array[4][4];
+              temp_array[1][3];
+              ```
+
+              ```
+                ; グローバルで上記の型を宣言
+                %array_type = type [4 x [4 x i8]]
+
+                define i8* @test_array_gep(%array_type* %a) {
+                  entry:
+                    %ret_val = getelementptr %array_type, %array_type* %a, i32 0, i32 1, i32 3
+                    ret i8* %ret_val
+                }
+              ```
+          </section>
+
+          <section style="text-align:left;" data-markdown>
+            ### LLVM IRのGEP(Struct)
+
+            ```
+            // こんな感じのStructの値が取得したい
+            struct temp_struct {
+              char a;
+              int b
+              int c[4];
+            };
+            temp_struct.b
+            ```
+
+            ```
+              ; グローバルで上記の型を宣言
+              %struct_type = type { i8, i32, [4 x i8] }
+
+              define i32* @test_stuct_gep(%struct_type* %s) {
+                entry:
+                  ; 直接field名を指定するのではなく、肩の宣言した順番を記述する
+                  ; bは2つ目に宣言したので1
+                  %ret_val = getelementptr %struct_type, %struct_type* %s, i32 0, i32 1
+                  ret i32* %ret_val
+              }
+            ```
+          </section>
+
+          <section style="text-align:left;" data-markdown>
+              ### LLVM IRのGEP
+
+              ```
+              ; 型, 型のポインタ 変数, index1, index2, ...(以下状況によって変更)
+              getelementptr %[12 x i8], %[12 x i8]* %local_str, i32 0, i32 0
+              ```
+
+              常にindex1が0にならない…?
+          </section>
+
+          <section style="text-align:left;" data-markdown>
+              ### LLVM IRのGEP
+
+              index1が0以外のケース。ないことはないらしい…
+
+              ```
+                // Cのソース
+                struct munger_struct {
+                  int f1;
+                  int f2;
+                };
+
+                void munge(struct munger_struct *P) {
+                  P[0].f1 = P[1].f1 + P[2].f2;
+                }
+              ```
+
+              ```
+              ; LLVM IR
+              void %munge(%struct.munger_struct* %P) {
+                entry:
+                  %tmp = getelementptr %struct.munger_struct, %struct.munger_struct* %P, i32 1, i32 0
+                  %tmp = load i32* %tmp
+                  %tmp6 = getelementptr %struct.munger_struct, %struct.munger_struct* %P, i32 2, i32 1
+                  %tmp7 = load i32* %tmp6
+                  %tmp8 = add i32 %tmp7, %tmp
+                  %tmp9 = getelementptr %struct.munger_struct, %struct.munger_struct* %P, i32 0, i32 0
+                  store i32 %tmp8, i32* %tmp9
+                  ret void
+              }
+              ```
+          </section>
+        </section>
+
+      <section>
+        <section style="text-align:left;" data-markdown>
+          ### llvm-sys.rs
+            - 単純に動かすだけならサンプルを参考にすれば良いと思う
+            - unsafeとか生ポインタとかの話は割愛
+            - LLVMBuildGEPについての説明をする
+        </section>
+
+        <section style="text-align:left;" data-markdown>
+            ### 作成するLLVM IR
+
+            ```
+            %local_str = alloca [12 x i8]
+            store [12 x i8] c"hello world\00", [12 x i8]* %local_str
+            %input_puts = getelementptr [12 x i8], [12 x i8]* %local_str, i32 0, i32 0
+            ```
+        </section>
+
+        <section style="text-align:left;" data-markdown>
+            以下Rustのコード
+
+            - 長いし読みにくいので実際のコードの[リンク]()貼ります
+            - 次のスライドでgetelementptrだけ説明します
+
+```
+pub fn codegen_string(
+  builder: *mut LLVMBuilder,
+  context: *mut LLVMContext,
+  input_str: &str,
+) -> *mut LLVMValue {
+
+    let length = input_str.len() as u32;
+
+    unsafe {
+        // %local_str = alloca [12 x i8]
+        let llvm_value = LLVMBuildAlloca(
+                      builder,
+                      LLVMArrayType(LLVMInt8Type(), length),
+                      c_string!("").as_ptr(),
+        );
+
+        // store [12 x i8] c"hello world\00", [12 x i8]* %local_str
+        let str_val = LLVMConstStringInContext(
+          context,
+          c_string!(input_str).as_ptr(),
+          length - 1,
+          0
+        );
+        LLVMBuildStore(builder, str_val, llvm_value);
+
+        // 以下getelementptrのとこを作る
+        let mut args = [
+                      LLVMConstInt(LLVMInt32Type(), 0, 0),
+                      LLVMConstInt(LLVMInt32Type(), 0, 0),
+        ];
+
+        return LLVMBuildGEP(
+                      builder,
+                      llvm_value,
+                      args.as_mut_ptr(),
+                      args.len(),
+                      CString::new("").unwrap().as_ptr(),
+        );
+    }
 }
-						</code>
-					</pre>	
-				</section>
+```
+        </section>
 
-				<section>
-					<p style="display:block; width:100%; text-align:left; margin-left: 10px;">公式の見解は?</p>
-					<a href="https://github.com/kripken/emscripten/issues/3985">
-						Emscripten用のビルドスクリプトは作ってくれている
-					</a>
-					<p>新しいversionがrust-sdl2に取り込まれれば動くだろう</p>
-					<img src="img/ThankYoufdelapena.png" />
-				</section>
+        <section style="text-align:left;" data-markdown>
+          ##### お作法なので知ってしまえば簡単
+```
+// 「getelementptr [12 x i8], [12 x i8]* %local_str, i32 0, i32 0」の
+// 「i32 0, i32 0」のところ
+let mut args = [
+  LLVMConstInt(LLVMInt32Type(), 0, 0),
+  LLVMConstInt(LLVMInt32Type(), 0, 0),
+];
 
-				<section style="text-align:left;">
-					<p>そもそも円じゃない</p>
+return LLVMBuildGEP(
+  builder,
+  llvm_value,        // ArrayとかStructとか
+  args.as_mut_ptr(),
+  args.len(),         // 第3引数のlength。引数として指定する意味がわからない
+  CString::new("").unwrap().as_ptr(), // 空文字の場合、勝手に変数名が生成される
+);
 
-					<p>Emscripten Portsに</p>
-					<p>線や円などを描画するライブラリ「SDL2_gfx」がない</p>
-					<p>=> SDL2_gfxを外してSDL2が描画できる矩形で代用</p>
-				</section>
+```
 
-				<section style="text-align:left;">
-					<p>自力でemscripten用のビルドスクリプトを書くしかない</p>
+        </section>
+      </section>
 
-					<li>cargoはrustcでを実行した後にemccを呼び出している</li>
-					<li>emccが読めるインプット(*.bc, *.oなど)にrustcで変換</li>
-					<li>emccが読めるライブラリをビルドして読み込ませる</li>
-					<img src="img/errorForSDL2_gfx.png" />
-				</section>
+      <section>
+        <section style="text-align:left;" data-markdown>
+            ### まとめ1
+  
+            #### getelementptrについて
 
-				<section style="text-align:left;">
-					<section style="text-align:left;">
-						<p>まとめというか感想</p>
+            - 慣れればそこまで難しいものではないと思う
+            - 使えないとほぼ何もできないので勉強できて良かった
+            - CのAPI使われてなさすぎな気がするのだけど何故?
+            
+        </section>  
 
-						<li>単純な変換なら特に問題なさそう</li>
-						<li>ただし使えるライブラリがほぼない</li>
-						<li>自力でEmscripten用ライブラリをビルドする必要あり</li>
-						<li>LLVMとemccの知識が必須</li>
-					</section>
+        <section style="text-align:left;" data-markdown>
+            ### まとめ2
+  
+            #### llvm-sys.rsでLLVM IRを出力する意味はあるのか?
+  
+            - あまりなさそう。RustでLLVM IRを出力すれば良さそうな気はする
+            - しかしLLVM IRについて知れたのは良いことなのでは?
+            - ~~まぁその時楽しめれば良いよね~~
+            
+        </section>
+      </section>
 
-					<section style="text-align:left;">
-						<p>まとめというか感想</p>
-						<li>リベンジとして後日、別途公開します</li>
-					</section>
-				</section>
+
+        <section style="text-align:left;">
+          <p>参考リンク</p>
+          <p>
+            <a href="https://llvm.org/docs/LangRef.html#getelementptr-instruction">公式reference</a>
+          </p>
+          <p>
+            <a href="https://llvm.org/docs/GetElementPtr.html">公式のGetElementPtrの詳細な解説</a>
+          </p>
+          <p>
+            <a href="https://github.com/ponylang/ponyc">ponycのレポジトリ(困ったら読む)</a>
+          </p>
+          <p>
+            <a href="http://www.aosabook.org/en/llvm.html#fig.llvm.lcom">The Architecture of Open Source ApplicationsのLLVM</a>
+          </p>
+          <p>
+            <a href="https://en.wikipedia.org/wiki/Compiler#Three-stage_compiler_structure">Three-stage_compiler_structure</a>
+          </p>
+          <p>
+            <a href="https://tatsu-zine.com/books/llvm">きつねさんでもわかるLLVM</a>
+          </p>
+        </section>
 
 				<section style="text-align:left;">
 					<h2>ご静聴ありがとうございました!</h2>
 				</section>
-
 			</div>
 		</div>
 
