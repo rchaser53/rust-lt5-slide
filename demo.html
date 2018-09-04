@@ -100,58 +100,161 @@
           </section>
         </section>
 
-        <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 50px; font-weight:bold;">monkey langとは</p>
-            <p><a href="https://www.oreilly.co.jp/books/9784873118222/">Go言語でつくるインタプリタ</a>で作れる言語</p>
-            <p><a href="https://github.com/tsuyoshiwada/rs-monkey-lang">既にRustで書いている人</a>がいるので</p>
-            <p>最終産物だけ今回は変えてみようと試みました(現在作成中)</p>
-          </script>
+        <section>
+          <section style="text-align:left;" data-markdown>
+            ### 背景
+            - [Go言語でつくるインタプリタ](https://www.oreilly.co.jp/books/9784873118222/)をRustで書いてる
+            - [もうやった人いる](https://github.com/tsuyoshiwada/rs-monkey-lang)
+            - じゃあ改良して任意のLLVM IRを出力してみよう
+          </section>
+
+          <section style="text-align:left;" data-markdown>
+            ### 背景
+            - hello worldまでの道のりが辛い
+            - 資料らしい資料がない
+            - では自分で書こう(イマココ)
+          </section>
         </section>
 
         <section style="text-align:left; width:100%; display:block;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 50px; font-weight:bold;">どうやるの?</p>
-            1. lexer
-            2. parser
-            3. evalulation 主にここを変えてllvm-irを出力する
-          </script>
+          ### 何を使うの?
+            - [llvm-sys.rs](https://github.com/tari/llvm-sys.rs)というLLVM IRを出力するモジュールを使う
+            - LLVMはLLVM IRを出力するモジュールを提供している
+            - CとC++版がありllvm-sys.rsはC版をbindingしている
         </section>
-        
+
         <section style="text-align:left; width:100%; display:block;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 50px; font-weight:bold;">何を使うの?</p>
-            <p><a href="https://github.com/tari/llvm-sys.rs">llvm-sys.rs</a>というLLVM C APIのbindingを用いる</p>
-            <p>LLVM自体はCとC++のAPIを提供している</p>
-            <p>極めて薄いので実質C書いているようなものな気がする</p>
-          </script>
+          ### llvm-sys.rs
+            - 非常に薄い。ほとんどCのAPIと大差ない
+            - ドキュメントやサンプルはほぼない
+            - CのAPIに関しても少ない。C++ならいくらか
+            - 困ったら[ponyc](https://github.com/ponylang/ponyc)を見に行くのをオススメ
         </section>
 
-        <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 50px; font-weight:bold;">資料とモチベーション</p>
-            <p>ドキュメントやサンプルはほとんどない(llvm-irの資料はある)</p>
-            <p>CのAPIで探しても少ない。C++の資料を参照するかソースを読みに行った方が良い</p>
-            <p><a href="https://github.com/ponylang/ponyc">ponycが神</a></p>
-          </script>
+        <section style="text-align:left; width:100%; display:block;" data-markdown>
+          ### 何が難しい?
+            - GetElementPtr(GEP)が難しいと思う
+            - LLVM IR上で直にいじるのにも慣れがいる
+            - [公式の専用の解説ページ](https://llvm.org/docs/GetElementPtr.html)まである
+            - CのAPIやリファレンスが正直わかりにくいのも原因
         </section>
 
-        <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 50px; font-weight:bold;">資料とモチベーション</p>
-            <p>正直、初学者のハードルが高い</p>
-            <p>資料が欲しい(欲しかった)ので作る</p>
-            <p>主にお前のせいだ。GEP</p>
-          </script>
+
+        <section>
+          <section style="text-align:left;" data-markdown>
+            ### GEP(GetElementPtr)とは
+            - ArraysやStructsのsubelementのアドレスを取得する
+            - つまりArraysやStructsを操作には必須となる
+            - 文字列はi8のArray。hello worldするにはこいつが必要
+          </section>
         </section>
 
-        <section style="text-align:left;" data-markdown>
-          <script type="text/template">
-            <p style="font-size: 50px; font-weight:bold;">GEP(GetElementPtr)とは</p>
-            <p>ArraysやStructsのようなAggregate Typeのsubelementのアドレスを取得する</p>
-            <p>ArraysやStructsを操作する際に用いる</p>
-            <p>文字列はi8のArrayなのでhello worldするにはこいつが必要</p>
-          </script>
+        <section>
+          <section style="text-align:left;" data-markdown>
+            ### まずはLLVM IRで出力できるようにする
+            
+            - 拡張子はll。test.llとか作れば良い
+            - LLVMのツールチェーンであるlliを用いて実行すると楽
+
+            ```
+              $ lli test.ll
+            ```
+            
+          </section>
+
+          <section style="text-align:left; width:100%; display:block;" data-markdown>
+            多分の最小の構成
+            ```
+            define i32 @main(i32, i8**) {
+
+            entry:
+              %local_str = alloca [12 x i8]
+              store [12 x i8] c"hello world\00", [12 x i8]* %local_str
+              %input_puts = getelementptr inbounds [12 x i8], [12 x i8]* %local_str, i32 0, i32 0
+              call i32 @printf(i8* %input_puts)
+            
+              ret i32 0
+            }
+
+            declare i32 @printf(i8*)
+            ```
+          </section>
+
+          <section style="text-align:left; width:100%; display:block;" data-markdown>
+            解説1
+
+            ```
+            ; 頭文字に;がつくとその行はコメント
+            ; @xxxでグローバル変数、 %yyyでローカル変数
+
+            ; 戻り値の型 関数名(引数の型1, 引数の型2)
+            define i32 @main(i32, i8**) {
+              
+            ; エントリポイントとなるラベル。必須
+            entry:
+              %local_str = alloca [12 x i8]
+              store [12 x i8] c"hello world\00", [12 x i8]* %local_str
+              %input_puts = getelementptr inbounds [12 x i8], [12 x i8]* %local_str, i32 0, i32 0
+              call i32 @printf(i8* %input_puts)
+            
+              ret i32 0
+            }
+
+            
+            declare i32 @printf(i8*)
+            ```
+          </section>
+
+          <section style="text-align:left; width:100%; display:block;" data-markdown>
+              解説2
+  
+              ```
+              define i32 @main(i32, i8**) {
+
+              entry:
+                ; レジスタ上に初期化する
+                ; [12 x i8]は要素が12のArray
+                %local_str = alloca [12 x i8]
+
+                ; レジスタに値を設定する
+                ; 基本的に「型 値」みたいな形で記述する
+                ; (例) [12 x i8] c"hello world\00"
+                store [12 x i8] c"hello world\00", [12 x i8]* %local_str
+
+                ; getelementptr(後述)
+                %input_puts = getelementptr inbounds [12 x i8], [12 x i8]* %local_str, i32 0, i32 0
+                call i32 @printf(i8* %input_puts)
+              
+                ret i32 0
+              }
+  
+              
+              declare i32 @printf(i8*)
+              ```
+          </section>
+
+          <section style="text-align:left; width:100%; display:block;" data-markdown>
+              解説3
+
+              ```
+              define i32 @main(i32, i8**) {
+
+              entry:
+                %local_str = alloca [12 x i8]
+                store [12 x i8] c"hello world\00", [12 x i8]* %local_str
+                %input_puts = getelementptr inbounds [12 x i8], [12 x i8]* %local_str, i32 0, i32 0
+
+                ; 関数呼び出し
+                call i32 @printf(i8* %input_puts)
+                
+                ; return
+                ret i32 0
+              }
+
+              ; 標準ライブラリから呼び出す関数を指定
+              declare i32 @printf(i8*)
+              ```
+          </section>
         </section>
 
         <section style="text-align:left;" data-markdown>
