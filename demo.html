@@ -42,23 +42,62 @@
       <!-- Any section element inside of this container is displayed as a slide -->
       <div class="slides">
         <section>
-          <p style="font-size:60px;">rustでllvm-irを出力する</p>
+          <p style="font-size:60px;">rustでllvm-ir(hello world編)</p>
           <p><a href="https://twitter.com/rChaser53">@rchaser53</a></p>
           <img alt="" src="./img/neko.jpg" />
         </section>
 
-        <section style="text-align:left;">
-          <p>rust-sysを用いてllvm-irを吐く話です</p>
-          <p><a href="https://github.com/rchaser53/rust-monkey-ir">自作の言語</a>の最終出力物をllvm-irにしました</p>
-          <p>llvm-irをこれから触る方の足しになれば幸いです</p>
+        <section style="text-align:left;" data-markdown>
+          - [llvm-sys.rs](https://github.com/tari/llvm-sys.rs)を用いてllvm-irでhello worldする話です
+          - 思いの外hello worldまで長かったので書きました
+          - プリントデバッグに必要な知識だから仕方ないね
+          - llvm-irをこれから触る方の足しになれば幸いです
         </section>
 
         <section style="text-align:left;" data-markdown>
           <script type="text/template">
-          <p style="font-size: 50px; font-weight:bold;">llvm-irとは?</p>
-            - コンパイラのフロントエンドの部分で出力するもの
-            - Rustもllvm-irは出力している
+            <p style="font-size: 50px; font-weight:bold;">LLVMとは?</p>
+            <p>コンパイラ基盤を作るプロジェクト</p>
+            <p>ツールチェーンやコンパイラ、モジュールなどを提供</p>
+            <p>RustもLLVMを使用している</p>
+            
+            <p style="text-align:center;">
+              <img alt="" src="./img/RetargetableCompiler.png" />
+            </p>
           </script>
+        </section>
+
+        <section>
+          <section style="text-align:left;" data-markdown>
+            ### LLVM IRとは?
+            - LLVMはThree-stage compiler structureを採用している
+            - LLVM IRは各フェイズ間のデータのやりとりに使う
+          </section>
+
+          <section style="text-align:left;" data-markdown>
+            ### Three-stage compiler structure
+            複数のフェイズに分けて開発するコンパイラの設計方法
+            
+            - フロントエンド
+              - パース, エラーチェック、ASTの生成など
+            - ミドルエンド(Optimizer)
+              - 最適化、高速化など
+            - バックエンド
+              - 各プラットフォーム向けの最終産物の生成など
+            
+            IRを用いて各フェイズでデータのやり取りをする
+          </section>
+
+          <section style="text-align:left;" data-markdown>
+            ### LLVM IRとは?
+            
+            こんな感じで各フェイズ間のデータのやりとりに使う
+            
+            ![](./img/LLVMCompiler1.png)
+
+            - 以下でRustでも見れる
+              - cargo rustc -- --emit=llvm-ir
+          </section>
         </section>
 
         <section style="text-align:left;" data-markdown>
