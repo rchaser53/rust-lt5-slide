@@ -58,17 +58,17 @@
         </section>
 
         <section style="text-align:left;" data-markdown>
-          - [llvm-sys.rs](https://github.com/tari/llvm-sys.rs)を用いてhello worldする話です
-          - 思いの外hello worldで苦戦したので書きました
+          - [llvm-sys.rs](https://github.com/tari/llvm-sys.rs)を用いてhello worldする話
+          - 思いの外hello worldで苦戦したので書いた
           - プリントデバッグに必要な知識だから仕方ないね
           - LLVM IRをこれから触る方の足しになれば幸いです
         </section>
 
         <section style="text-align:left;" data-markdown>
           ### 前座が長いので本題だけ見たい方は
-          - 14ページまでジャンプ
-          - サンプルの[レポジトリ](git@github.com:rchaser53/llvm-ir-lt-sample.git)
-          - 今回の技術を使う予定の[自作言語](https://github.com/rchaser53/rust-monkey-ir)
+          - 14ページまでジャンプしていただければ…
+          - サンプルの[レポジトリ](https://github.com/rchaser53/llvm-ir-lt-sample)
+          - loop, if, structの使用などのサンプルもある(暇なら)
         </section>
 
         <section style="text-align:left;" data-markdown>
@@ -117,6 +117,7 @@
           <section style="text-align:left;" data-markdown>
             ### 背景
             - [Go言語でつくるインタプリタ](https://www.oreilly.co.jp/books/9784873118222/)をRustで書いてる
+            - [制作途中のものはこれ](https://github.com/rchaser53/rust-monkey-ir)
             - [もうやった人いる](https://github.com/tsuyoshiwada/rs-monkey-lang)
             - じゃあ改良して任意のLLVM IRを出力してみよう
           </section>
@@ -133,7 +134,7 @@
           ### 何を使うの?
             - [llvm-sys.rs](https://github.com/tari/llvm-sys.rs)というLLVM IRを出力するモジュールを使う
             - LLVMはLLVM IRを出力するモジュールを提供している
-            - CとC++版がありllvm-sys.rsはC版をbindingしている
+            - CとC++で書かれておりllvm-sys.rsはCのやつをbindingしている
         </section>
 
         <section style="text-align:left; width:100%; display:block;" data-markdown>
@@ -402,8 +403,9 @@
         <section style="text-align:left;" data-markdown>
             以下Rustのコード
 
-            - 長いし読みにくいので実際のコードの[リンク]()貼ります
-            - 次のスライドでgetelementptrだけ説明します
+            - 長いし読みにくいので実際のコードの[リンク](https://github.com/rchaser53/llvm-ir-lt-sample/blob/master/src/hello_world.rs)貼る
+            - リンク先のコードの方がいくらかマシだと思う
+            - 次のスライドでgetelementptrだけ説明する
 
 ```
 pub fn codegen_string(
@@ -441,7 +443,7 @@ pub fn codegen_string(
                       builder,
                       llvm_value,
                       args.as_mut_ptr(),
-                      args.len(),
+                      args.len() as u32,
                       CString::new("").unwrap().as_ptr(),
         );
     }
@@ -461,9 +463,9 @@ let mut args = [
 
 return LLVMBuildGEP(
   builder,
-  llvm_value,        // ArrayとかStructとか
+  llvm_value,         // ArrayとかStructとか
   args.as_mut_ptr(),
-  args.len(),         // 第3引数のlength。引数として指定する意味がわからない
+  args.len() as u32,   // 第3引数のlength。引数として指定する意味がわからない
   CString::new("").unwrap().as_ptr(), // 空文字の場合、勝手に変数名が生成される
 );
 
